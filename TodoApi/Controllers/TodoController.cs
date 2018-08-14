@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using TodoApi.Models;
+using TodoApi.Repositories;
 
 namespace TodoApi.Controllers
 {
@@ -9,17 +10,11 @@ namespace TodoApi.Controllers
     [ApiController]
     public class TodoController : ControllerBase
     {
-        private readonly TodoContext _context;
+        private readonly TodoRepository _repo;
 
-        public TodoController(TodoContext context)
+        public TodoController(TodoRepository repo)
         {
-            _context = context;
-
-            if (_context.TodoItems.Count() == 0)
-            {
-                _context.TodoItems.Add(new TodoItem { Name = "Item1" });
-                _context.SaveChanges();
-            }
+            _repo = repo;
         }
 
         // GET: api/todo
@@ -30,7 +25,7 @@ namespace TodoApi.Controllers
         [HttpGet]
         public IEnumerable<TodoItem> GetAll()
         {
-            return _context.TodoItems.ToList();
+            return _repo.Get(x => true);
         }
 
         // GET api/todo/5
@@ -41,11 +36,25 @@ namespace TodoApi.Controllers
         [HttpGet("{id}", Name = "GetTodo")]
         public ActionResult<TodoItem> GetById(int id)
         {
-            var item = _context.TodoItems.Find(id);
+            var item = _repo.GetById(id);
             if (item == null)
                 return NotFound();
 
             return item;
+        }
+
+        // GET api/todo/5
+        /// <summary>
+        /// Gets an existing TODO item
+        /// </summary>
+        [HttpGet("match")]
+        public ActionResult<IEnumerable<TodoItem>> GetByName([FromQuery] string name)
+        {
+            var items = _repo.Get(x => x.Name == name);
+            if (items == null)
+                return NotFound();
+
+            return new ActionResult<IEnumerable<TodoItem>>(items);
         }
 
         // POST api/todo
@@ -56,9 +65,7 @@ namespace TodoApi.Controllers
         [HttpPost]
         public IActionResult Create(TodoItem item)
         {
-            _context.TodoItems.Add(item);
-            _context.SaveChanges();
-
+            _repo.Create(item);
             return CreatedAtRoute("GetTodo", new { id = item.Id }, item);
         }
 
@@ -71,15 +78,14 @@ namespace TodoApi.Controllers
         [HttpPut("{id}")]
         public IActionResult Update(long id, TodoItem item)
         {
-            var todo = _context.TodoItems.Find(id);
+            var todo = _repo.GetById(id);
             if (todo == null)
                 return NotFound();
 
             todo.IsComplete = item.IsComplete;
             todo.Name = item.Name;
 
-            _context.TodoItems.Update(todo);
-            _context.SaveChanges();
+            _repo.Update(id, item);
             return NoContent();
         }
 
@@ -91,12 +97,11 @@ namespace TodoApi.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(long id)
         {
-            var todo = _context.TodoItems.Find(id);
+            var todo = _repo.GetById(id);
             if (todo == null)
                 return NotFound();
 
-            _context.TodoItems.Remove(todo);
-            _context.SaveChanges();
+            _repo.Delete(todo);
             return NoContent();
         }
     }
