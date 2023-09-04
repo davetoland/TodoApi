@@ -4,7 +4,6 @@ using Microsoft.OpenApi.Models;
 using TodoApiV7;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Configuration.AddUserSecrets<Program>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddDbContext<TodoRepo>(opt => opt.UseInMemoryDatabase("TodoRepo"));
 builder.Services.AddEndpointsApiExplorer();
